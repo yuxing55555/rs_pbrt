@@ -52,7 +52,7 @@ impl SamplerIntegrator for WhittedIntegrator {
 
             // compute scattering functions for surface interaction
             let mode: TransportMode = TransportMode::Radiance;
-            isect.compute_scattering_functions(ray /* arena, */, false, mode);
+            isect.compute_scattering_functions(ray, arena, false, mode);
             // if (!isect.bsdf)
             if let Some(ref _bsdf) = isect.bsdf {
             } else {

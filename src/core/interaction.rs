@@ -10,6 +10,8 @@
 // std
 use std;
 use std::sync::{Arc, RwLock};
+// others
+use bumpalo::Bump;
 // pbrt
 use crate::core::bssrdf::TabulatedBssrdf;
 use crate::core::geometry::{
@@ -422,7 +424,7 @@ impl SurfaceInteraction {
     pub fn compute_scattering_functions(
         &mut self,
         ray: &Ray,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         allow_multiple_lobes: bool,
         mode: TransportMode,
     ) {

@@ -65,7 +65,7 @@ impl SamplerIntegrator for AOIntegrator {
         };
         if let Some(mut isect) = scene.intersect(&mut ray) {
             let mode: TransportMode = TransportMode::Radiance;
-            isect.compute_scattering_functions(&mut ray, true, mode);
+            isect.compute_scattering_functions(&mut ray, arena, true, mode);
             // if (!isect.bsdf) {
             //     VLOG(2) << "Skipping intersection due to null bsdf";
             //     ray = isect.SpawnRay(ray.d);

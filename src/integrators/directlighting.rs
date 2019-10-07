@@ -70,7 +70,7 @@ impl SamplerIntegrator for DirectLightingIntegrator {
         if let Some(mut isect) = scene.intersect(ray) {
             // compute scattering functions for surface interaction
             let mode: TransportMode = TransportMode::Radiance;
-            isect.compute_scattering_functions(ray /* arena, */, false, mode);
+            isect.compute_scattering_functions(ray, arena, false, mode);
             // if (!isect.bsdf)
             //     return Li(isect.SpawnRay(ray.d), scene, sampler, arena, depth);
             let wo: Vector3f = isect.wo;

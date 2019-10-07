@@ -102,7 +102,7 @@ impl SamplerIntegrator for PathIntegrator {
                 }
                 // compute scattering functions and skip over medium boundaries
                 let mode: TransportMode = TransportMode::Radiance;
-                isect.compute_scattering_functions(&mut ray, true, mode);
+                isect.compute_scattering_functions(&mut ray, arena, true, mode);
                 if let Some(ref _bsdf) = isect.bsdf {
                     // we are fine (for below)
                 } else {
