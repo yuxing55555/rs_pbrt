@@ -1,3 +1,5 @@
+// others
+use bumpalo::Bump;
 // pbrt
 use crate::core::geometry::{nrm_cross_vec3, nrm_faceforward_vec3, vec3_dot_nrm};
 use crate::core::geometry::{Bounds2i, Normal3f, Point2f, Ray, Vector3f};
@@ -48,7 +50,7 @@ impl SamplerIntegrator for AOIntegrator {
         r: &mut Ray,
         scene: &Scene,
         sampler: &mut Box<dyn Sampler + Send + Sync>,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         _depth: i32,
     ) -> Spectrum {
         // TODO: ProfilePhase p(Prof::SamplerIntegratorLi);

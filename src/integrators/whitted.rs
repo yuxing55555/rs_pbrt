@@ -1,3 +1,5 @@
+// others
+use bumpalo::Bump;
 // pbrt
 use crate::core::geometry::vec3_abs_dot_nrm;
 use crate::core::geometry::{Bounds2i, Normal3f, Ray, Vector3f};
@@ -36,7 +38,7 @@ impl SamplerIntegrator for WhittedIntegrator {
         ray: &mut Ray,
         scene: &Scene,
         sampler: &mut Box<dyn Sampler + Send + Sync>,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         depth: i32,
     ) -> Spectrum {
         let mut l: Spectrum = Spectrum::default();
@@ -54,7 +56,7 @@ impl SamplerIntegrator for WhittedIntegrator {
             // if (!isect.bsdf)
             if let Some(ref _bsdf) = isect.bsdf {
             } else {
-                return self.li(&mut isect.spawn_ray(&ray.d), scene, sampler, depth);
+                return self.li(&mut isect.spawn_ray(&ray.d), scene, sampler, arena, depth);
             }
             // compute emitted light if ray hit an area light source
             l += isect.le(&wo);
@@ -94,14 +96,8 @@ impl SamplerIntegrator for WhittedIntegrator {
             }
             if depth as u32 + 1 < self.max_depth {
                 // trace rays for specular reflection and refraction
-                l += self.specular_reflect(
-                    ray, &isect, scene, sampler, // arena,
-                    depth,
-                );
-                l += self.specular_transmit(
-                    ray, &isect, scene, sampler, // arena,
-                    depth,
-                );
+                l += self.specular_reflect(ray, &isect, scene, sampler, arena, depth);
+                l += self.specular_transmit(ray, &isect, scene, sampler, arena, depth);
             }
             return l;
         } else {

@@ -60,6 +60,8 @@
 
 // std
 use std::sync::Arc;
+// others
+use bumpalo::Bump;
 // pbrt
 use crate::blockqueue::BlockQueue;
 use crate::core::camera::{Camera, CameraSample};
@@ -75,7 +77,6 @@ pub mod bdpt;
 pub mod directlighting;
 pub mod mlt;
 pub mod path;
-pub mod sppm;
 pub mod volpath;
 pub mod whitted;
 
@@ -152,6 +153,7 @@ pub fn render(
                             while !done {
                                 // let's use the copy_arena crate instead of pbrt's MemoryArena
                                 // let mut arena: Arena = Arena::with_capacity(262144); // 256kB
+                                let mut arena: Bump = Bump::new();
 
                                 // initialize _CameraSample_ for current sample
                                 let camera_sample: CameraSample =
@@ -172,7 +174,8 @@ pub fn render(
                                     l = integrator.li(
                                         &mut ray,
                                         scene,
-                                        &mut tile_sampler, // &mut arena,
+                                        &mut tile_sampler,
+                                        &mut arena,
                                         0_i32,
                                     );
                                 }

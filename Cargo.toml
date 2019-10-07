@@ -6,6 +6,7 @@ version = "0.7.1"
 [dependencies]
 atom = "0.3.5"
 atomic = "0.4"
+bumpalo = "2.6"
 byteorder = "1"
 crossbeam = "0.7.2"
 crossbeam-channel = "0.3"

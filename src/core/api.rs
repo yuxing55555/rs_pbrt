@@ -50,8 +50,8 @@ use crate::integrators::mlt::render_mlt;
 use crate::integrators::mlt::MLTIntegrator;
 use crate::integrators::path::PathIntegrator;
 use crate::integrators::render;
-use crate::integrators::sppm::render_sppm;
-use crate::integrators::sppm::SPPMIntegrator;
+// use crate::integrators::sppm::render_sppm;
+// use crate::integrators::sppm::SPPMIntegrator;
 use crate::integrators::volpath::VolPathIntegrator;
 use crate::integrators::whitted::WhittedIntegrator;
 use crate::lights::diffuse::DiffuseAreaLight;
@@ -2006,7 +2006,7 @@ pub fn pbrt_cleanup(api_state: &ApiState) {
                         None;
                     let mut some_bdpt_integrator: Option<Box<BDPTIntegrator>> = None;
                     let mut some_mlt_integrator: Option<Box<MLTIntegrator>> = None;
-                    let mut some_sppm_integrator: Option<Box<SPPMIntegrator>> = None;
+                    // let mut some_sppm_integrator: Option<Box<SPPMIntegrator>> = None;
                     if api_state.render_options.integrator_name == "whitted" {
                         let max_depth: i32 = api_state
                             .render_options
@@ -2227,42 +2227,42 @@ pub fn pbrt_cleanup(api_state: &ApiState) {
                         let integrator =
                             Box::new(AOIntegrator::new(cos_sample, n_samples, pixel_bounds));
                         some_integrator = Some(integrator);
-                    } else if api_state.render_options.integrator_name == "sppm" {
-                        // CreateSPPMIntegrator
-                        let mut n_iterations: i32 = api_state
-                            .render_options
-                            .integrator_params
-                            .find_one_int("numiterations", 64);
-                        n_iterations = api_state
-                            .render_options
-                            .integrator_params
-                            .find_one_int("iterations", n_iterations);
-                        let max_depth: i32 = api_state
-                            .render_options
-                            .integrator_params
-                            .find_one_int("maxdepth", 5);
-                        let photons_per_iter: i32 = api_state
-                            .render_options
-                            .integrator_params
-                            .find_one_int("photonsperiteration", -1);
-                        let write_freq: i32 = api_state
-                            .render_options
-                            .integrator_params
-                            .find_one_int("imagewritefrequency", 1 << 31);
-                        let radius: Float = api_state
-                            .render_options
-                            .integrator_params
-                            .find_one_float("radius", 1.0 as Float);
-                        // TODO: if (PbrtOptions.quickRender) nIterations = std::max(1, nIterations / 16);
-                        let integrator = Box::new(SPPMIntegrator::new(
-                            camera.clone(),
-                            n_iterations,
-                            photons_per_iter,
-                            max_depth as u32,
-                            radius,
-                            write_freq,
-                        ));
-                        some_sppm_integrator = Some(integrator);
+                    // } else if api_state.render_options.integrator_name == "sppm" {
+                    //     // CreateSPPMIntegrator
+                    //     let mut n_iterations: i32 = api_state
+                    //         .render_options
+                    //         .integrator_params
+                    //         .find_one_int("numiterations", 64);
+                    //     n_iterations = api_state
+                    //         .render_options
+                    //         .integrator_params
+                    //         .find_one_int("iterations", n_iterations);
+                    //     let max_depth: i32 = api_state
+                    //         .render_options
+                    //         .integrator_params
+                    //         .find_one_int("maxdepth", 5);
+                    //     let photons_per_iter: i32 = api_state
+                    //         .render_options
+                    //         .integrator_params
+                    //         .find_one_int("photonsperiteration", -1);
+                    //     let write_freq: i32 = api_state
+                    //         .render_options
+                    //         .integrator_params
+                    //         .find_one_int("imagewritefrequency", 1 << 31);
+                    //     let radius: Float = api_state
+                    //         .render_options
+                    //         .integrator_params
+                    //         .find_one_float("radius", 1.0 as Float);
+                    //     // TODO: if (PbrtOptions.quickRender) nIterations = std::max(1, nIterations / 16);
+                    //     let integrator = Box::new(SPPMIntegrator::new(
+                    //         camera.clone(),
+                    //         n_iterations,
+                    //         photons_per_iter,
+                    //         max_depth as u32,
+                    //         radius,
+                    //         write_freq,
+                    //     ));
+                    //     some_sppm_integrator = Some(integrator);
                     } else {
                         panic!(
                             "Integrator \"{}\" unknown.",
@@ -2441,68 +2441,68 @@ pub fn pbrt_cleanup(api_state: &ApiState) {
                                 api_state.render_options.accelerator_name
                             );
                         }
-                    } else if let Some(mut integrator) = some_sppm_integrator {
-                        // because we can't call
-                        // integrator.render() yet,
-                        // let us repeat some code and
-                        // call render_sppm(...)
-                        // instead:
+                    // } else if let Some(mut integrator) = some_sppm_integrator {
+                    //     // because we can't call
+                    //     // integrator.render() yet,
+                    //     // let us repeat some code and
+                    //     // call render_sppm(...)
+                    //     // instead:
 
-                        // MakeIntegrator
-                        // TODO: if (renderOptions->haveScatteringMedia && ...)
-                        if api_state.render_options.lights.is_empty() {
-                            // warn if no light sources are defined
-                            println!("WARNING: No light sources defined in scene; rendering a black image.",);
-                        }
-                        // MakeAccelerator
-                        if api_state.render_options.accelerator_name == "bvh" {
-                            //  CreateBVHAccelerator
-                            let accelerator = BVHAccel::create(
-                                api_state.render_options.primitives.clone(),
-                                &api_state.render_options.accelerator_params,
-                            );
-                            // MakeScene
-                            let scene: Scene = Scene::new(
-                                accelerator.clone(),
-                                api_state.render_options.lights.clone(),
-                            );
-                            // TODO: primitives.erase(primitives.begin(), primitives.end());
-                            // TODO: lights.erase(lights.begin(), lights.end());
-                            let num_threads: u8 = api_state.number_of_threads;
-                            render_sppm(
-                                &scene,
-                                &camera,
-                                &mut sampler,
-                                &mut integrator,
-                                num_threads,
-                            );
-                        } else if api_state.render_options.accelerator_name == "kdtree" {
-                            // CreateKdTreeAccelerator
-                            let accelerator = KdTreeAccel::create(
-                                api_state.render_options.primitives.clone(),
-                                &api_state.render_options.accelerator_params,
-                            );
-                            // MakeScene
-                            let scene: Scene = Scene::new(
-                                accelerator.clone(),
-                                api_state.render_options.lights.clone(),
-                            );
-                            // TODO: primitives.erase(primitives.begin(), primitives.end());
-                            // TODO: lights.erase(lights.begin(), lights.end());
-                            let num_threads: u8 = api_state.number_of_threads;
-                            render_sppm(
-                                &scene,
-                                &camera,
-                                &mut sampler,
-                                &mut integrator,
-                                num_threads,
-                            );
-                        } else {
-                            panic!(
-                                "Accelerator \"{}\" unknown.",
-                                api_state.render_options.accelerator_name
-                            );
-                        }
+                    //     // MakeIntegrator
+                    //     // TODO: if (renderOptions->haveScatteringMedia && ...)
+                    //     if api_state.render_options.lights.is_empty() {
+                    //         // warn if no light sources are defined
+                    //         println!("WARNING: No light sources defined in scene; rendering a black image.",);
+                    //     }
+                    //     // MakeAccelerator
+                    //     if api_state.render_options.accelerator_name == "bvh" {
+                    //         //  CreateBVHAccelerator
+                    //         let accelerator = BVHAccel::create(
+                    //             api_state.render_options.primitives.clone(),
+                    //             &api_state.render_options.accelerator_params,
+                    //         );
+                    //         // MakeScene
+                    //         let scene: Scene = Scene::new(
+                    //             accelerator.clone(),
+                    //             api_state.render_options.lights.clone(),
+                    //         );
+                    //         // TODO: primitives.erase(primitives.begin(), primitives.end());
+                    //         // TODO: lights.erase(lights.begin(), lights.end());
+                    //         let num_threads: u8 = api_state.number_of_threads;
+                    //         render_sppm(
+                    //             &scene,
+                    //             &camera,
+                    //             &mut sampler,
+                    //             &mut integrator,
+                    //             num_threads,
+                    //         );
+                    //     } else if api_state.render_options.accelerator_name == "kdtree" {
+                    //         // CreateKdTreeAccelerator
+                    //         let accelerator = KdTreeAccel::create(
+                    //             api_state.render_options.primitives.clone(),
+                    //             &api_state.render_options.accelerator_params,
+                    //         );
+                    //         // MakeScene
+                    //         let scene: Scene = Scene::new(
+                    //             accelerator.clone(),
+                    //             api_state.render_options.lights.clone(),
+                    //         );
+                    //         // TODO: primitives.erase(primitives.begin(), primitives.end());
+                    //         // TODO: lights.erase(lights.begin(), lights.end());
+                    //         let num_threads: u8 = api_state.number_of_threads;
+                    //         render_sppm(
+                    //             &scene,
+                    //             &camera,
+                    //             &mut sampler,
+                    //             &mut integrator,
+                    //             num_threads,
+                    //         );
+                    //     } else {
+                    //         panic!(
+                    //             "Accelerator \"{}\" unknown.",
+                    //             api_state.render_options.accelerator_name
+                    //         );
+                    //     }
                     } else {
                         panic!("Unable to create integrator.");
                     }

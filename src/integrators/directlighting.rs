@@ -1,3 +1,5 @@
+// others
+use bumpalo::Bump;
 // pbrt
 use crate::core::geometry::{Bounds2i, Ray, Vector3f};
 use crate::core::integrator::SamplerIntegrator;
@@ -59,7 +61,7 @@ impl SamplerIntegrator for DirectLightingIntegrator {
         ray: &mut Ray,
         scene: &Scene,
         sampler: &mut Box<dyn Sampler + Send + Sync>,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         depth: i32,
     ) -> Spectrum {
         // TODO: ProfilePhase p(Prof::SamplerIntegratorLi);
@@ -79,24 +81,19 @@ impl SamplerIntegrator for DirectLightingIntegrator {
                     l += uniform_sample_all_lights(
                         &isect,
                         scene,
+                        arena,
                         sampler,
                         &self.n_light_samples,
                         false,
                     );
                 } else {
-                    l += uniform_sample_one_light(&isect, scene, sampler, false, None);
+                    l += uniform_sample_one_light(&isect, scene, arena, sampler, false, None);
                 }
             }
             if ((depth + 1_i32) as u32) < self.max_depth {
                 // trace rays for specular reflection and refraction
-                l += self.specular_reflect(
-                    ray, &isect, scene, sampler, // arena,
-                    depth,
-                );
-                l += self.specular_transmit(
-                    ray, &isect, scene, sampler, // arena,
-                    depth,
-                );
+                l += self.specular_reflect(ray, &isect, scene, sampler, arena, depth);
+                l += self.specular_transmit(ray, &isect, scene, sampler, arena, depth);
             }
         } else {
             for light in &scene.lights {

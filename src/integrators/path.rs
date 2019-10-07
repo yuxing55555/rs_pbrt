@@ -1,6 +1,8 @@
 // std
 use std::borrow::Borrow;
 use std::sync::Arc;
+// others
+use bumpalo::Bump;
 // pbrt
 use crate::core::bssrdf::Bssrdf;
 use crate::core::geometry::{vec3_abs_dot_nrm, vec3_dot_nrm};
@@ -57,7 +59,7 @@ impl SamplerIntegrator for PathIntegrator {
         r: &mut Ray,
         scene: &Scene,
         sampler: &mut Box<dyn Sampler + Send + Sync>,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         _depth: i32,
     ) -> Spectrum {
         // TODO: ProfilePhase p(Prof::SamplerIntegratorLi);
@@ -121,6 +123,7 @@ impl SamplerIntegrator for PathIntegrator {
                                 * uniform_sample_one_light(
                                     &isect,
                                     scene,
+                                    arena,
                                     sampler,
                                     false,
                                     Some(Arc::borrow(&distrib)),
@@ -211,6 +214,7 @@ impl SamplerIntegrator for PathIntegrator {
                                         * uniform_sample_one_light(
                                             &pi,
                                             scene,
+                                            arena,
                                             sampler,
                                             false,
                                             Some(Arc::borrow(&distrib)),

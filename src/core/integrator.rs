@@ -4,6 +4,8 @@
 // std
 use std;
 use std::sync::Arc;
+// others
+use bumpalo::Bump;
 // pbrt
 use crate::core::geometry::{vec3_abs_dot_nrm, vec3_dot_nrm};
 use crate::core::geometry::{Bounds2i, Normal3f, Point2f, Ray, RayDifferential, Vector3f};
@@ -30,7 +32,7 @@ pub trait SamplerIntegrator {
         ray: &mut Ray,
         scene: &Scene,
         sampler: &mut Box<dyn Sampler + Send + Sync>,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         depth: i32,
     ) -> Spectrum;
     fn get_pixel_bounds(&self) -> Bounds2i;
@@ -40,7 +42,7 @@ pub trait SamplerIntegrator {
         isect: &SurfaceInteraction,
         scene: &Scene,
         sampler: &mut Box<dyn Sampler + Send + Sync>,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         depth: i32,
     ) -> Spectrum {
         // compute specular reflection direction _wi_ and BSDF value
@@ -90,7 +92,7 @@ pub trait SamplerIntegrator {
                     rd.differential = Some(diff);
                 }
                 return f
-                    * self.li(&mut rd, scene, sampler, depth + 1)
+                    * self.li(&mut rd, scene, sampler, arena, depth + 1)
                     * Spectrum::new(vec3_abs_dot_nrm(&wi, &ns) / pdf);
             } else {
                 Spectrum::new(0.0)
@@ -105,7 +107,7 @@ pub trait SamplerIntegrator {
         isect: &SurfaceInteraction,
         scene: &Scene,
         sampler: &mut Box<dyn Sampler + Send + Sync>,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         depth: i32,
     ) -> Spectrum {
         let wo: Vector3f = isect.wo;
@@ -162,7 +164,7 @@ pub trait SamplerIntegrator {
                     rd.differential = Some(diff);
                 }
                 return f
-                    * self.li(&mut rd, scene, sampler, depth + 1)
+                    * self.li(&mut rd, scene, sampler, arena, depth + 1)
                     * Spectrum::new(vec3_abs_dot_nrm(&wi, &ns) / pdf);
             } else {
                 Spectrum::new(0.0)
@@ -179,6 +181,7 @@ pub trait SamplerIntegrator {
 pub fn uniform_sample_all_lights(
     it: &SurfaceInteraction,
     scene: &Scene,
+    arena: &mut Bump,
     sampler: &mut Box<dyn Sampler + Send + Sync>,
     n_light_samples: &Vec<i32>,
     handle_media: bool,
@@ -202,6 +205,7 @@ pub fn uniform_sample_all_lights(
                 &u_light,
                 scene,
                 sampler,
+                arena,
                 handle_media,
                 false,
             );
@@ -216,6 +220,7 @@ pub fn uniform_sample_all_lights(
                     &u_light_array[k as usize],
                     scene,
                     sampler,
+                    arena,
                     handle_media,
                     false,
                 );
@@ -231,6 +236,7 @@ pub fn uniform_sample_all_lights(
 pub fn uniform_sample_one_light(
     it: &dyn Interaction,
     scene: &Scene,
+    arena: &mut Bump,
     sampler: &mut Box<dyn Sampler + Send + Sync>,
     handle_media: bool,
     light_distrib: Option<&Distribution1D>,
@@ -269,6 +275,7 @@ pub fn uniform_sample_one_light(
         &u_light,
         scene,
         sampler,
+        arena,
         handle_media,
         false,
     ) / pdf
@@ -282,7 +289,7 @@ pub fn estimate_direct(
     u_light: &Point2f,
     scene: &Scene,
     sampler: &mut Box<dyn Sampler + Send + Sync>,
-    // TODO: arena
+    arena: &mut Bump,
     handle_media: bool,
     specular: bool,
 ) -> Spectrum {
