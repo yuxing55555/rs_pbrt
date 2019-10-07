@@ -3,6 +3,8 @@
 
 // std
 use std::sync::Arc;
+// others
+use bumpalo::Bump;
 // pbrt
 use crate::core::geometry::nrm_dot_nrm;
 use crate::core::geometry::{Bounds3f, Ray};
@@ -25,13 +27,14 @@ pub trait Primitive {
     fn compute_scattering_functions(
         &self,
         isect: &mut SurfaceInteraction,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         mode: TransportMode,
         allow_multiple_lobes: bool,
     ) {
         if let Some(ref material) = self.get_material() {
             material.compute_scattering_functions(
-                isect, // arena,
+                isect,
+                arena,
                 mode,
                 allow_multiple_lobes,
                 self.get_material(),

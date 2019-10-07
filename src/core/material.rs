@@ -3,6 +3,8 @@
 
 //std
 use std::sync::{Arc, RwLock};
+// others
+use bumpalo::Bump;
 // pbrt
 use crate::core::geometry::vec3_cross_vec3;
 use crate::core::geometry::{Normal3f, Vector2f, Vector3f};
@@ -32,7 +34,7 @@ pub trait Material {
     fn compute_scattering_functions(
         &self,
         si: &mut SurfaceInteraction,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         mode: TransportMode,
         allow_multiple_lobes: bool,
         material: Option<Arc<dyn Material + Send + Sync>>,

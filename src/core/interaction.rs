@@ -430,11 +430,7 @@ impl SurfaceInteraction {
     ) {
         self.compute_differentials(ray);
         if let Some(ref primitive) = self.primitive.clone() {
-            primitive.compute_scattering_functions(
-                self, // arena,
-                mode,
-                allow_multiple_lobes,
-            );
+            primitive.compute_scattering_functions(self, arena, mode, allow_multiple_lobes);
         }
     }
     pub fn compute_differentials(&mut self, ray: &Ray) {

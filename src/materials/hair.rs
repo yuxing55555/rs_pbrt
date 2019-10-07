@@ -2,6 +2,8 @@
 use std;
 use std::f32::consts::PI;
 use std::sync::Arc;
+// others
+use bumpalo::Bump;
 // pbrt
 use crate::core::geometry::{Point2f, Vector3f};
 use crate::core::interaction::SurfaceInteraction;
@@ -129,7 +131,7 @@ impl Material for HairMaterial {
     fn compute_scattering_functions(
         &self,
         si: &mut SurfaceInteraction,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         _mode: TransportMode,
         _allow_multiple_lobes: bool,
         _material: Option<Arc<dyn Material + Send + Sync>>,

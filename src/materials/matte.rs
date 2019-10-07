@@ -1,6 +1,8 @@
 //std
 use std;
 use std::sync::Arc;
+// others
+use bumpalo::Bump;
 // pbrt
 use crate::core::interaction::SurfaceInteraction;
 use crate::core::material::{Material, TransportMode};
@@ -44,7 +46,7 @@ impl Material for MatteMaterial {
     fn compute_scattering_functions(
         &self,
         si: &mut SurfaceInteraction,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         _mode: TransportMode,
         _allow_multiple_lobes: bool,
         _material: Option<Arc<dyn Material + Send + Sync>>,

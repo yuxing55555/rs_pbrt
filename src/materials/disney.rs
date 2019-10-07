@@ -3,6 +3,9 @@ use std::sync::Arc;
 
 use num::Zero;
 
+// others
+use bumpalo::Bump;
+// pbrt
 use crate::core::geometry::{spherical_direction, vec3_dot_vec3, Point2f, Vector3f};
 use crate::core::interaction::SurfaceInteraction;
 use crate::core::material::{Material, TransportMode};
@@ -80,6 +83,7 @@ impl Material for DisneyMaterial {
     fn compute_scattering_functions(
         &self,
         si: &mut SurfaceInteraction,
+        arena: &mut Bump,
         mode: TransportMode,
         _allow_multiple_lobes: bool,
         _material: Option<Arc<dyn Material + Send + Sync>>,

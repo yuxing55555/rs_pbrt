@@ -1,6 +1,8 @@
 //std
 use std;
 use std::sync::Arc;
+// others
+use bumpalo::Bump;
 // pbrt
 use crate::core::interaction::SurfaceInteraction;
 use crate::core::material::{Material, TransportMode};
@@ -34,7 +36,7 @@ impl Material for MixMaterial {
     fn compute_scattering_functions(
         &self,
         si: &mut SurfaceInteraction,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         mode: TransportMode,
         allow_multiple_lobes: bool,
         _material: Option<Arc<dyn Material + Send + Sync>>,
@@ -63,9 +65,14 @@ impl Material for MixMaterial {
             shape_opt,
         );
         self.m1
-            .compute_scattering_functions(si, mode.clone(), allow_multiple_lobes, None);
-        self.m2
-            .compute_scattering_functions(&mut si2, mode.clone(), allow_multiple_lobes, None);
+            .compute_scattering_functions(si, arena, mode.clone(), allow_multiple_lobes, None);
+        self.m2.compute_scattering_functions(
+            &mut si2,
+            arena,
+            mode.clone(),
+            allow_multiple_lobes,
+            None,
+        );
         let bsdf_flags: u8 = BxdfType::BsdfAll as u8;
         if let Some(ref bsdf1) = si.bsdf {
             let n1: u8 = bsdf1.num_components(bsdf_flags);

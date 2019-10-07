@@ -2,6 +2,7 @@
 use std;
 use std::sync::Arc;
 // others
+use bumpalo::Bump;
 use time::PreciseTime;
 // pbrt
 use crate::core::bssrdf::compute_beam_diffusion_bssrdf;
@@ -128,7 +129,7 @@ impl Material for SubsurfaceMaterial {
     fn compute_scattering_functions(
         &self,
         si: &mut SurfaceInteraction,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         mode: TransportMode,
         allow_multiple_lobes: bool,
         material: Option<Arc<dyn Material + Send + Sync>>,

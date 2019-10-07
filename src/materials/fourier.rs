@@ -1,5 +1,7 @@
 //std
 use std::sync::Arc;
+// others
+use bumpalo::Bump;
 // pbrt
 use crate::core::api::BsdfState;
 use crate::core::interaction::SurfaceInteraction;
@@ -55,7 +57,7 @@ impl Material for FourierMaterial {
     fn compute_scattering_functions(
         &self,
         si: &mut SurfaceInteraction,
-        // arena: &mut Arena,
+        arena: &mut Bump,
         mode: TransportMode,
         _allow_multiple_lobes: bool,
         _material: Option<Arc<dyn Material + Send + Sync>>,
