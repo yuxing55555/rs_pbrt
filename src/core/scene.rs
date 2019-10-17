@@ -9,7 +9,7 @@ use std::sync::Arc;
 use crate::core::geometry::{Bounds3f, Ray, Vector3f};
 use crate::core::interaction::{Interaction, SurfaceInteraction};
 use crate::core::light::{Light, LightFlags};
-use crate::core::pbrt::{Float, Spectrum};
+use crate::core::pbrt::Spectrum;
 use crate::core::primitive::Primitive;
 use crate::core::sampler::Sampler;
 
@@ -55,7 +55,7 @@ impl Scene {
     pub fn world_bound(&self) -> Bounds3f {
         self.world_bound
     }
-    pub fn intersect(&self, ray: &mut Ray) -> Option<SurfaceInteraction> {
+    pub fn intersect(&self, ray: &mut Ray, isect: &mut SurfaceInteraction) -> bool {
         // TODO: ++nIntersectionTests;
         assert_ne!(
             ray.d,
@@ -65,7 +65,7 @@ impl Scene {
                 z: 0.0,
             }
         );
-        self.aggregate.intersect(ray)
+        self.aggregate.intersect(ray, isect)
     }
     pub fn intersect_p(&self, ray: &mut Ray) -> bool {
         // TODO: ++nShadowTests;
@@ -83,28 +83,29 @@ impl Scene {
         &self,
         ray: &mut Ray,
         sampler: &mut Box<dyn Sampler + Send + Sync>,
-    ) -> (Option<SurfaceInteraction>, Spectrum) {
-        let mut tr: Spectrum = Spectrum::new(1.0 as Float);
+        isect: &mut SurfaceInteraction,
+        tr: &mut Spectrum,
+    ) -> bool {
         loop {
             // bool hit_surface = Intersect(ray, isect);
-            if let Some(isect) = self.intersect(ray) {
+            if self.intersect(ray, isect) {
                 // accumulate beam transmittance for ray segment
                 if let Some(ref medium_arc) = ray.medium {
-                    tr *= medium_arc.tr(&ray, sampler);
+                    *tr *= medium_arc.tr(&ray, sampler);
                 }
                 // initialize next ray segment or terminate transmittance computation
                 if let Some(ref primitive) = isect.primitive {
                     if let Some(_material) = primitive.get_material() {
-                        return (Some(isect), tr);
+                        return true;
                     }
                 }
                 *ray = isect.spawn_ray(&ray.d);
             } else {
                 // accumulate beam transmittance for ray segment
                 if let Some(ref medium_arc) = ray.medium {
-                    tr *= medium_arc.tr(&ray, sampler);
+                    *tr *= medium_arc.tr(&ray, sampler);
                 }
-                return (None, tr);
+                return false;
             }
         }
     }

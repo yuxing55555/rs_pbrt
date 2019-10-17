@@ -2,6 +2,7 @@
 use crate::core::geometry::{Bounds2i, Ray, Vector3f};
 use crate::core::integrator::SamplerIntegrator;
 use crate::core::integrator::{uniform_sample_all_lights, uniform_sample_one_light};
+use crate::core::interaction::SurfaceInteraction;
 use crate::core::material::TransportMode;
 use crate::core::pbrt::{Float, Spectrum};
 use crate::core::sampler::Sampler;
@@ -65,7 +66,8 @@ impl SamplerIntegrator for DirectLightingIntegrator {
         // TODO: ProfilePhase p(Prof::SamplerIntegratorLi);
         let mut l: Spectrum = Spectrum::new(0.0 as Float);
         // find closest ray intersection or return background radiance
-        if let Some(mut isect) = scene.intersect(ray) {
+        let mut isect: SurfaceInteraction = SurfaceInteraction::default();
+        if scene.intersect(ray, &mut isect) {
             // compute scattering functions for surface interaction
             let mode: TransportMode = TransportMode::Radiance;
             isect.compute_scattering_functions(ray /* arena, */, false, mode);

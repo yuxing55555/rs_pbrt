@@ -16,7 +16,7 @@ use crate::core::pbrt::Float;
 pub trait Shape {
     fn object_bound(&self) -> Bounds3f;
     fn world_bound(&self) -> Bounds3f;
-    fn intersect(&self, r: &Ray) -> Option<(SurfaceInteraction, Float)>;
+    fn intersect(&self, r: &Ray, t_hit: &mut Float, isect: &mut SurfaceInteraction) -> bool;
     fn intersect_p(&self, r: &Ray) -> bool;
     fn get_reverse_orientation(&self) -> bool;
     fn get_transform_swaps_handedness(&self) -> bool;

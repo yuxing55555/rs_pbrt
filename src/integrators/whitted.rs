@@ -2,7 +2,7 @@
 use crate::core::geometry::vec3_abs_dot_nrm;
 use crate::core::geometry::{Bounds2i, Normal3f, Ray, Vector3f};
 use crate::core::integrator::SamplerIntegrator;
-use crate::core::interaction::{Interaction, InteractionCommon};
+use crate::core::interaction::{Interaction, InteractionCommon, SurfaceInteraction};
 use crate::core::light::VisibilityTester;
 use crate::core::material::TransportMode;
 use crate::core::pbrt::{Float, Spectrum};
@@ -41,7 +41,8 @@ impl SamplerIntegrator for WhittedIntegrator {
     ) -> Spectrum {
         let mut l: Spectrum = Spectrum::default();
         // find closest ray intersection or return background radiance
-        if let Some(mut isect) = scene.intersect(ray) {
+        let mut isect: SurfaceInteraction = SurfaceInteraction::default();
+        if scene.intersect(ray, &mut isect) {
             // compute emitted and reflected light at ray intersection point
 
             // initialize common variables for Whitted integrator

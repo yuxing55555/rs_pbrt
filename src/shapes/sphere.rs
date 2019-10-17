@@ -103,7 +103,7 @@ impl Shape for Sphere {
         // in C++: Bounds3f Shape::WorldBound() const { return (*ObjectToWorld)(ObjectBound()); }
         self.object_to_world.transform_bounds(&self.object_bound())
     }
-    fn intersect(&self, r: &Ray) -> Option<(SurfaceInteraction, Float)> {
+    fn intersect(&self, r: &Ray, t_hit: &mut Float, isect: &mut SurfaceInteraction) -> bool {
         // transform _Ray_ to object space
         let mut o_err: Vector3f = Vector3f::default();
         let mut d_err: Vector3f = Vector3f::default();
@@ -129,17 +129,17 @@ impl Shape for Sphere {
         let mut t0: EFloat = EFloat::default();
         let mut t1: EFloat = EFloat::default();
         if !quadratic_efloat(a, b, c, &mut t0, &mut t1) {
-            return None;
+            return false;
         }
         // check quadric shape _t0_ and _t1_ for nearest intersection
         if t0.upper_bound() > ray.t_max as f32 || t1.lower_bound() <= 0.0f32 {
-            return None;
+            return false;
         }
         let mut t_shape_hit: EFloat = t0;
         if t_shape_hit.lower_bound() <= 0.0f32 {
             t_shape_hit = t1;
             if t_shape_hit.upper_bound() > ray.t_max as f32 {
-                return None;
+                return false;
             }
         }
         // compute sphere hit position and $\phi$
@@ -159,10 +159,10 @@ impl Shape for Sphere {
             || phi > self.phi_max
         {
             if t_shape_hit == t1 {
-                return None;
+                return false;
             }
             if t1.upper_bound() > ray.t_max as f32 {
-                return None;
+                return false;
             }
             t_shape_hit = t1;
             // compute sphere hit position and $\phi$
@@ -181,7 +181,7 @@ impl Shape for Sphere {
                 || (self.z_max < self.radius && p_hit.z > self.z_max)
                 || phi > self.phi_max
             {
-                return None;
+                return false;
             }
         }
         // find parametric representation of sphere hit
@@ -268,14 +268,16 @@ impl Shape for Sphere {
             ray.time,
             Some(self),
         );
-        let mut isect: SurfaceInteraction = self.object_to_world.transform_surface_interaction(&si);
+        // *isect = 
+            self.object_to_world.transform_surface_interaction(&si);
         if let Some(ref shape) = si.shape {
-            isect.shape = Some(shape.clone());
+            // isect.shape = Some(shape.clone());
         }
         if let Some(primitive) = si.primitive {
-            isect.primitive = Some(primitive.clone());
+            // isect.primitive = Some(primitive.clone());
         }
-        Some((isect, t_shape_hit.v as Float))
+        *t_hit = t_shape_hit.v;
+        true
     }
     fn intersect_p(&self, r: &Ray) -> bool {
         // transform _Ray_ to object space
@@ -486,7 +488,9 @@ impl Shape for Sphere {
             // ignore any alpha textures used for trimming the shape when
             // performing this intersection. Hack for the "San Miguel"
             // scene, where this is used to make an invisible area light.
-            if let Some((isect_light, _t_hit)) = self.intersect(&ray) {
+            let mut t_hit: Float = 0.0;
+            let mut isect_light: SurfaceInteraction = SurfaceInteraction::default();
+            if self.intersect(&ray, &mut t_hit, &mut isect_light) {
                 // convert light sample weight to solid angle measure
                 let mut pdf: Float = pnt3_distance_squared(&iref.get_p(), &isect_light.p)
                     / (nrm_abs_dot_vec3(&isect_light.n, &-(*wi)) * self.area());

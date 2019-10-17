@@ -422,9 +422,9 @@ impl Primitive for BVHAccel {
             Bounds3f::default()
         }
     }
-    fn intersect(&self, ray: &mut Ray) -> Option<SurfaceInteraction> {
+    fn intersect(&self, ray: &mut Ray, isect: &mut SurfaceInteraction) -> bool {
         if self.nodes.len() == 0 {
-            return None;
+            return false;
         }
         // TODO: ProfilePhase p(Prof::AccelIntersect);
         let mut hit: bool = false;
@@ -442,7 +442,6 @@ impl Primitive for BVHAccel {
         let mut to_visit_offset: u32 = 0;
         let mut current_node_index: u32 = 0;
         let mut nodes_to_visit: [u32; 64] = [0_u32; 64];
-        let mut si: SurfaceInteraction = SurfaceInteraction::default();
         loop {
             let node: LinearBVHNode = self.nodes[current_node_index as usize];
             // check ray against BVH node
@@ -452,9 +451,8 @@ impl Primitive for BVHAccel {
                     // intersect ray with primitives in leaf BVH node
                     for i in 0..node.n_primitives {
                         // see primitive.h GeometricPrimitive::Intersect() ...
-                        if let Some(isect) = self.primitives[node.offset + i].intersect(ray) {
+                        if self.primitives[node.offset + i].intersect(ray, isect) {
                             // TODO: CHECK_GE(...)
-                            si = isect;
                             hit = true;
                         }
                     }
@@ -485,9 +483,9 @@ impl Primitive for BVHAccel {
             }
         }
         if hit {
-            Some(si)
+            true
         } else {
-            None
+            false
         }
     }
     fn intersect_p(&self, ray: &Ray) -> bool {

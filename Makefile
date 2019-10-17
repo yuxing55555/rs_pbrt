@@ -69,10 +69,8 @@ examples: without-exr
 	./target/release/examples/shapes_cylinder_create_cylinder_shape
 	./target/release/examples/shapes_disk_create_disk_shape
 	./target/release/examples/shapes_sphere_create_sphere_shape
-	./target/release/examples/shapes_sphere_intersect
 	./target/release/examples/shapes_sphere_world_bound
 	./target/release/examples/shapes_triangle_create_triangle_mesh
-	./target/release/examples/shapes_triangle_intersect
 	./target/release/examples/shapes_triangle_world_bound
 	./target/release/examples/transform_matrix4x4_identity
 	./target/release/examples/transform_matrix4x4_new

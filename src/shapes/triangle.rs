@@ -1,6 +1,7 @@
 // std
 use std::mem;
 use std::sync::Arc;
+use std::sync::RwLock;
 // pbrt
 use crate::core::geometry::{
     bnd3_union_pnt3, nrm_abs_dot_vec3, nrm_faceforward_nrm, pnt3_abs, pnt3_distance_squared,
@@ -147,7 +148,7 @@ impl Shape for Triangle {
         let p2: Point3f = self.mesh.p[self.mesh.vertex_indices[self.id * 3 + 2]];
         bnd3_union_pnt3(&Bounds3f::new(p0, p1), &p2)
     }
-    fn intersect(&self, ray: &Ray) -> Option<(SurfaceInteraction, Float)> {
+    fn intersect(&self, ray: &Ray, t_hit: &mut Float, isect: &mut SurfaceInteraction) -> bool {
         // get triangle vertices in _p0_, _p1_, and _p2_
         let p0: Point3f = self.mesh.p[self.mesh.vertex_indices[self.id * 3 + 0]];
         let p1: Point3f = self.mesh.p[self.mesh.vertex_indices[self.id * 3 + 1]];
@@ -214,11 +215,11 @@ impl Shape for Triangle {
         }
         // perform triangle edge and determinant tests
         if (e0 < 0.0 || e1 < 0.0 || e2 < 0.0) && (e0 > 0.0 || e1 > 0.0 || e2 > 0.0) {
-            return None;
+            return false;
         }
         let det: Float = e0 + e1 + e2;
         if det == 0.0 {
-            return None;
+            return false;
         }
         // compute scaled hit distance to triangle and test against ray $t$ range
         p0t.z *= sz;
@@ -226,9 +227,9 @@ impl Shape for Triangle {
         p2t.z *= sz;
         let t_scaled: Float = e0 * p0t.z + e1 * p1t.z + e2 * p2t.z;
         if det < 0.0 && (t_scaled >= 0.0 || t_scaled < ray.t_max * det) {
-            return None;
+            return false;
         } else if det > 0.0 && (t_scaled <= 0.0 || t_scaled > ray.t_max * det) {
-            return None;
+            return false;
         }
         // compute barycentric coordinates and $t$ value for triangle intersection
         let inv_det: Float = 1.0 / det;
@@ -283,7 +284,7 @@ impl Shape for Triangle {
         let delta_t: Float =
             3.0 * (gamma(3) * max_e * max_zt + delta_e * max_zt + delta_z * max_e) * inv_det.abs();
         if t <= delta_t {
-            return None;
+            return false;
         }
         // compute triangle partial derivatives
         let uv: [Point2f; 3] = self.get_uvs();
@@ -339,14 +340,14 @@ impl Shape for Triangle {
                 Some(self),
             );
             if alpha_mask.evaluate(&isect_local) == 0.0 as Float {
-                return None;
+                return false;
             }
         }
         // fill in _SurfaceInteraction_ from triangle hit
         let dndu: Normal3f = Normal3f::default();
         let dndv: Normal3f = Normal3f::default();
         let wo: Vector3f = -ray.d;
-        let mut si: SurfaceInteraction = SurfaceInteraction::new(
+        let isect_local: SurfaceInteraction = SurfaceInteraction::new(
             &p_hit,
             &p_error,
             &uv_hit,
@@ -358,10 +359,39 @@ impl Shape for Triangle {
             ray.time,
             Some(self),
         );
+        isect.p = isect_local.p;
+        isect.time = isect_local.time;
+        isect.p_error = isect_local.p_error;
+        isect.wo = isect_local.wo;
+        isect.n = isect_local.n;
+        isect.medium_interface = isect_local.medium_interface;
+        isect.uv = isect_local.uv;
+        isect.dpdu = isect_local.dpdu;
+        isect.dpdv = isect_local.dpdv;
+        isect.dndu = isect_local.dndu;
+        isect.dndv = isect_local.dndv;
+        let dpdx: Vector3f = *isect_local.dpdx.read().unwrap();
+        isect.dpdx = RwLock::new(dpdx);
+        let dpdy: Vector3f = *isect_local.dpdy.read().unwrap();
+        isect.dpdy = RwLock::new(dpdy);
+        let dudx: Float = *isect_local.dudx.read().unwrap();
+        isect.dudx = RwLock::new(dudx);
+        let dvdx: Float = *isect_local.dvdx.read().unwrap();
+        isect.dvdx = RwLock::new(dvdx);
+        let dudy: Float = *isect_local.dudy.read().unwrap();
+        isect.dudy = RwLock::new(dudy);
+        let dvdy: Float = *isect_local.dvdy.read().unwrap();
+        isect.dvdy = RwLock::new(dvdy);
+        // primitive: Option<&'a (dyn Primitive + Send + Sync)>,
+        // shading: Shading,
+        // bsdf: Option<Bsdf>,
+        // // bssrdf: Option<TabulatedBssrdf>,
+        // shape: Option<&'a (dyn Shape + Send + Sync)>,
+
         // override surface normal in _isect_ for triangle
         let surface_normal: Normal3f = Normal3f::from(vec3_cross_vec3(&dp02, &dp12).normalize());
-        si.n = surface_normal;
-        si.shading.n = surface_normal;
+        isect.n = surface_normal;
+        isect.shading.n = surface_normal;
         if !self.mesh.n.is_empty() || !self.mesh.s.is_empty() {
             // initialize _Triangle_ shading geometry
 
@@ -375,10 +405,10 @@ impl Shape for Triangle {
                 if ns.length_squared() > 0.0 {
                     ns = ns.normalize();
                 } else {
-                    ns = si.n;
+                    ns = isect.n;
                 }
             } else {
-                ns = si.n;
+                ns = isect.n;
             }
             // compute shading tangent _ss_ for triangle
             let mut ss: Vector3f;
@@ -390,10 +420,10 @@ impl Shape for Triangle {
                 if ss.length_squared() > 0.0 {
                     ss = ss.normalize();
                 } else {
-                    ss = si.dpdu.normalize();
+                    ss = isect.dpdu.normalize();
                 }
             } else {
-                ss = si.dpdu.normalize();
+                ss = isect.dpdu.normalize();
             }
             // compute shading bitangent _ts_ for triangle and adjust _ss_
             let mut ts: Vector3f = vec3_cross_nrm(&ss, &ns);
@@ -430,16 +460,17 @@ impl Shape for Triangle {
                 dndu = Normal3f::default();
                 dndv = Normal3f::default();
             }
-            si.set_shading_geometry(&ss, &ts, &dndu, &dndv, true);
+            isect.set_shading_geometry(&ss, &ts, &dndu, &dndv, true);
         }
         // ensure correct orientation of the geometric normal
         if !self.mesh.n.is_empty() {
-            si.n = nrm_faceforward_nrm(&si.n, &si.shading.n);
+            isect.n = nrm_faceforward_nrm(&isect.n, &isect.shading.n);
         } else if self.reverse_orientation ^ self.transform_swaps_handedness {
-            si.shading.n = -si.n;
-            si.n = -si.n;
+            isect.shading.n = -isect.n;
+            isect.n = -isect.n;
         }
-        Some((si, t as Float))
+        *t_hit = t;
+        true
     }
     fn intersect_p(&self, ray: &Ray) -> bool {
         // TODO: ProfilePhase p(Prof::TriIntersectP);
@@ -718,7 +749,9 @@ impl Shape for Triangle {
         // ignore any alpha textures used for trimming the shape when
         // performing this intersection. Hack for the "San Miguel"
         // scene, where this is used to make an invisible area light.
-        if let Some((isect_light, _t_hit)) = self.intersect(&ray) {
+        let mut t_hit: Float = 0.0;
+        let mut isect_light: SurfaceInteraction = SurfaceInteraction::default();
+        if self.intersect(&ray, &mut t_hit, &mut isect_light) {
             // convert light sample weight to solid angle measure
             let mut pdf: Float = pnt3_distance_squared(&iref.get_p(), &isect_light.p)
                 / (nrm_abs_dot_vec3(&isect_light.n, &-(*wi)) * self.area());

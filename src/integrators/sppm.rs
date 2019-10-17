@@ -16,7 +16,7 @@ use crate::core::geometry::{
     Bounds2i, Bounds3f, Normal3f, Point2f, Point2i, Point3f, Point3i, Ray, Vector2i, Vector3f,
 };
 use crate::core::integrator::{compute_light_power_distribution, uniform_sample_one_light};
-use crate::core::interaction::Interaction;
+use crate::core::interaction::{Interaction, SurfaceInteraction};
 use crate::core::lowdiscrepancy::radical_inverse;
 use crate::core::material::TransportMode;
 use crate::core::parallel::AtomicFloat;
@@ -243,8 +243,10 @@ pub fn render_sppm(
                                         );
                                         let mut specular_bounce: bool = false;
                                         for depth in 0..integrator.max_depth {
+                                            let mut isect: SurfaceInteraction =
+                                                SurfaceInteraction::default();
                                             // TODO: ++totalPhotonSurfaceInteractions;
-                                            if let Some(mut isect) = scene.intersect(&mut ray) {
+                                            if scene.intersect(&mut ray, &mut isect) {
                                                 // process SPPM camera ray intersection
 
                                                 // compute BSDF at SPPM camera ray intersection
@@ -591,8 +593,9 @@ pub fn render_sppm(
                                         }
                                         // follow photon path through scene and record intersections
                                         for depth in 0..integrator.max_depth {
-                                            if let Some(mut isect) =
-                                                scene.intersect(&mut photon_ray)
+                                            let mut isect: SurfaceInteraction =
+                                                SurfaceInteraction::default();
+                                            if scene.intersect(&mut photon_ray, &mut isect)
                                             {
                                                 // TODO: ++totalPhotonSurfaceInteractions;
                                                 if depth > 0 {
@@ -780,7 +783,7 @@ pub fn render_sppm(
                                             p.radius * (n_new / (p.n + p_m as Float)).sqrt();
                                         let mut phi: Spectrum = Spectrum::default();
                                         for j in 0..3 {
-                                            phi[j] = Float::from(&p.phi[j]);;
+                                            phi[j] = Float::from(&p.phi[j]);
                                         }
                                         p.tau = (p.tau + p.vp.beta * phi) * (r_new * r_new)
                                             / (p.radius * p.radius);

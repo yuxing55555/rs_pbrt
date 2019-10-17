@@ -408,10 +408,9 @@ pub fn estimate_direct(
             let mut found_surface_interaction: bool = false;
             // add light contribution from material sampling
             let mut li: Spectrum = Spectrum::default();
+            let mut light_isect: SurfaceInteraction = SurfaceInteraction::default();
             if handle_media {
-                let (light_isect_opt, tr_spectrum) = scene.intersect_tr(&mut ray, sampler);
-                tr = tr_spectrum; // copy return value
-                if let Some(ref light_isect) = light_isect_opt {
+                if scene.intersect_tr(&mut ray, sampler, &mut light_isect, &mut tr) {
                     found_surface_interaction = true;
                     if let Some(primitive) = &light_isect.primitive {
                         if let Some(area_light) = primitive.get_area_light() {
@@ -424,7 +423,7 @@ pub fn estimate_direct(
                     }
                 }
             } else {
-                if let Some(ref light_isect) = scene.intersect(&mut ray) {
+                if scene.intersect(&mut ray, &mut light_isect) {
                     found_surface_interaction = true;
                     if let Some(primitive) = &light_isect.primitive {
                         if let Some(area_light) = primitive.get_area_light() {

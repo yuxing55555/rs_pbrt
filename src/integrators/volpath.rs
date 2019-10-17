@@ -7,7 +7,7 @@ use crate::core::geometry::{vec3_abs_dot_nrm, vec3_dot_nrm};
 use crate::core::geometry::{Bounds2i, Point2f, Ray, Vector3f};
 use crate::core::integrator::uniform_sample_one_light;
 use crate::core::integrator::SamplerIntegrator;
-use crate::core::interaction::{Interaction, MediumInteraction};
+use crate::core::interaction::{Interaction, MediumInteraction, SurfaceInteraction};
 use crate::core::lightdistrib::create_light_sample_distribution;
 use crate::core::lightdistrib::LightDistribution;
 use crate::core::material::TransportMode;
@@ -86,7 +86,8 @@ impl SamplerIntegrator for VolPathIntegrator {
         loop {
             let mut mi_opt: Option<MediumInteraction> = None;
             // intersect _ray_ with scene and store intersection in _isect_
-            if let Some(mut isect) = scene.intersect(&mut ray) {
+            let mut isect: SurfaceInteraction = SurfaceInteraction::default();
+            if scene.intersect(&mut ray, &mut isect) {
                 // sample the participating medium, if present
                 if let Some(ref medium) = ray.medium {
                     let (spectrum, option) = medium.sample(&ray, sampler);
@@ -205,70 +206,70 @@ impl SamplerIntegrator for VolPathIntegrator {
                             }
                             ray = isect.spawn_ray(&wi);
                             // account for attenuated subsurface scattering, if applicable
-                            if let Some(ref bssrdf) = isect.bssrdf {
-                                if (sampled_type & BxdfType::BsdfTransmission as u8) != 0_u8 {
-                                    // importance sample the BSSRDF
-                                    let s2: Point2f = sampler.get_2d();
-                                    let s1: Float = sampler.get_1d();
-                                    let (s, pi_opt) = bssrdf.sample_s(
-                                        // the next three (extra) parameters are used for SeparableBssrdfAdapter
-                                        bssrdf.clone(),
-                                        bssrdf.mode,
-                                        bssrdf.eta,
-                                        // done
-                                        scene,
-                                        s1,
-                                        &s2,
-                                        &mut pdf,
-                                    );
-                                    if s.is_black() || pdf == 0.0 as Float {
-                                        break;
-                                    }
-                                    assert!(!(beta.y().is_infinite()));
-                                    beta *= s / pdf;
-                                    if let Some(pi) = pi_opt {
-                                        // account for the direct subsurface scattering component
-                                        let distrib: Arc<Distribution1D> =
-                                            light_distribution.lookup(&pi.p);
-                                        l += beta
-                                            * uniform_sample_one_light(
-                                                &pi,
-                                                scene,
-                                                sampler,
-                                                true,
-                                                Some(Arc::borrow(&distrib)),
-                                            );
-                                        // account for the indirect subsurface scattering component
-                                        let mut wi: Vector3f = Vector3f::default();
-                                        let mut pdf: Float = 0.0 as Float;
-                                        let bsdf_flags: u8 = BxdfType::BsdfAll as u8;
-                                        let mut sampled_type: u8 = u8::max_value(); // != 0
-                                        if let Some(ref bsdf) = pi.bsdf {
-                                            let f: Spectrum = bsdf.sample_f(
-                                                &pi.wo,
-                                                &mut wi,
-                                                &sampler.get_2d(),
-                                                &mut pdf,
-                                                bsdf_flags,
-                                                &mut sampled_type,
-                                            );
-                                            if f.is_black() || pdf == 0.0 as Float {
-                                                break;
-                                            }
-                                            beta *= f * vec3_abs_dot_nrm(&wi, &pi.shading.n) / pdf;
-                                            assert!(!(beta.y().is_infinite()));
-                                            specular_bounce = (sampled_type
-                                                & BxdfType::BsdfSpecular as u8)
-                                                != 0_u8;
-                                            ray = pi.spawn_ray(&wi);
-                                        } else {
-                                            panic!("no pi.bsdf found");
-                                        }
-                                    } else {
-                                        panic!("bssrdf.sample_s() did return (s, None)");
-                                    }
-                                }
-                            }
+                            // if let Some(ref bssrdf) = isect.bssrdf {
+                            //     if (sampled_type & BxdfType::BsdfTransmission as u8) != 0_u8 {
+                            //         // importance sample the BSSRDF
+                            //         let s2: Point2f = sampler.get_2d();
+                            //         let s1: Float = sampler.get_1d();
+                            //         let (s, pi_opt) = bssrdf.sample_s(
+                            //             // the next three (extra) parameters are used for SeparableBssrdfAdapter
+                            //             bssrdf.clone(),
+                            //             bssrdf.mode,
+                            //             bssrdf.eta,
+                            //             // done
+                            //             scene,
+                            //             s1,
+                            //             &s2,
+                            //             &mut pdf,
+                            //         );
+                            //         if s.is_black() || pdf == 0.0 as Float {
+                            //             break;
+                            //         }
+                            //         assert!(!(beta.y().is_infinite()));
+                            //         beta *= s / pdf;
+                            //         if let Some(pi) = pi_opt {
+                            //             // account for the direct subsurface scattering component
+                            //             let distrib: Arc<Distribution1D> =
+                            //                 light_distribution.lookup(&pi.p);
+                            //             l += beta
+                            //                 * uniform_sample_one_light(
+                            //                     &pi,
+                            //                     scene,
+                            //                     sampler,
+                            //                     true,
+                            //                     Some(Arc::borrow(&distrib)),
+                            //                 );
+                            //             // account for the indirect subsurface scattering component
+                            //             let mut wi: Vector3f = Vector3f::default();
+                            //             let mut pdf: Float = 0.0 as Float;
+                            //             let bsdf_flags: u8 = BxdfType::BsdfAll as u8;
+                            //             let mut sampled_type: u8 = u8::max_value(); // != 0
+                            //             if let Some(ref bsdf) = pi.bsdf {
+                            //                 let f: Spectrum = bsdf.sample_f(
+                            //                     &pi.wo,
+                            //                     &mut wi,
+                            //                     &sampler.get_2d(),
+                            //                     &mut pdf,
+                            //                     bsdf_flags,
+                            //                     &mut sampled_type,
+                            //                 );
+                            //                 if f.is_black() || pdf == 0.0 as Float {
+                            //                     break;
+                            //                 }
+                            //                 beta *= f * vec3_abs_dot_nrm(&wi, &pi.shading.n) / pdf;
+                            //                 assert!(!(beta.y().is_infinite()));
+                            //                 specular_bounce = (sampled_type
+                            //                     & BxdfType::BsdfSpecular as u8)
+                            //                     != 0_u8;
+                            //                 ray = pi.spawn_ray(&wi);
+                            //             } else {
+                            //                 panic!("no pi.bsdf found");
+                            //             }
+                            //         } else {
+                            //             panic!("bssrdf.sample_s() did return (s, None)");
+                            //         }
+                            //     }
+                            // }
                         } else {
                             println!("TODO: if let Some(ref bsdf) = isect.bsdf failed");
                         }

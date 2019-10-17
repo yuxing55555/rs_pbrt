@@ -1002,7 +1002,8 @@ pub fn random_walk<'a>(
         let mut si_opt: Option<SurfaceInteraction> = None;
         // trace a ray and sample the medium, if any
         let found_intersection: bool;
-        if let Some(isect) = scene.intersect(&mut ray) {
+        let mut isect: SurfaceInteraction = SurfaceInteraction::default();
+        if scene.intersect(&mut ray, &mut isect) {
             si_opt = Some(isect);
             found_intersection = true;
         } else {

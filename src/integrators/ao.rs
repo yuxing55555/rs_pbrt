@@ -2,7 +2,7 @@
 use crate::core::geometry::{nrm_cross_vec3, nrm_faceforward_vec3, vec3_dot_nrm};
 use crate::core::geometry::{Bounds2i, Normal3f, Point2f, Ray, Vector3f};
 use crate::core::integrator::SamplerIntegrator;
-use crate::core::interaction::Interaction;
+use crate::core::interaction::{Interaction, SurfaceInteraction};
 use crate::core::material::TransportMode;
 use crate::core::pbrt::{Float, Spectrum};
 use crate::core::sampler::Sampler;
@@ -61,7 +61,8 @@ impl SamplerIntegrator for AOIntegrator {
             differential: r.differential,
             medium: r.medium.clone(),
         };
-        if let Some(mut isect) = scene.intersect(&mut ray) {
+        let mut isect: SurfaceInteraction = SurfaceInteraction::default();
+        if scene.intersect(&mut ray, &mut isect) {
             let mode: TransportMode = TransportMode::Radiance;
             isect.compute_scattering_functions(&mut ray, true, mode);
             // if (!isect.bsdf) {

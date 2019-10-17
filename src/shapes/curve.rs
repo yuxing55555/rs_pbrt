@@ -139,13 +139,15 @@ impl Curve {
     fn recursive_intersect(
         &self,
         ray: &Ray,
+        t_hit: &mut Float,
+        isect: &mut SurfaceInteraction,
         cp: &[Point3f; 4],
         ray_to_object: &Transform,
         u0: Float,
         u1: Float,
         depth: i32,
-    ) -> Option<(SurfaceInteraction, Float)> {
-        let mut hit: Option<(SurfaceInteraction, Float)> = None;
+    ) -> bool {
+        let mut hit: bool = false;
         let ray_length: Float = ray.d.length();
 
         if depth > 0_i32 {
@@ -192,8 +194,10 @@ impl Curve {
                     continue;
                 }
 
-                if let Some((isect, t_hit)) = self.recursive_intersect(
+                if self.recursive_intersect(
                     ray,
+                    t_hit,
+                    isect,
                     &[cps[0], cps[1], cps[2], cps[3]],
                     ray_to_object,
                     u[seg],
@@ -202,14 +206,14 @@ impl Curve {
                 ) {
                     // If we found an intersection and this is a shadow ray,
                     // we can exit out immediately.
-                    if t_hit == 0.0 as Float {
-                        return Some((isect, t_hit));
+                    if *t_hit == 0.0 as Float {
+                        return true;
                     } else {
-                        hit = Some((isect, t_hit));
+                        hit = true;
                     }
                 }
             }
-            return hit;
+            hit
         } else {
             // intersect ray with curve segment
 
@@ -218,13 +222,13 @@ impl Curve {
             // test sample point against tangent perpendicular at curve start
             let mut edge: Float = (cp[1].y - cp[0].y) * -cp[0].y + cp[0].x * (cp[0].x - cp[1].x);
             if edge < 0.0 as Float {
-                return None;
+                return false;
             }
 
             // test sample point against tangent perpendicular at curve end
             edge = (cp[2].y - cp[3].y) * -cp[3].y + cp[3].x * (cp[3].x - cp[2].x);
             if edge < 0.0 as Float {
-                return None;
+                return false;
             }
 
             // compute line $w$ that gives minimum distance to sample point
@@ -237,7 +241,7 @@ impl Curve {
             };
             let denom: Float = segment_direction.length_squared();
             if denom == 0.0 as Float {
-                return None;
+                return false;
             }
             let w: Float = vec2_dot(
                 &-Vector2f {
@@ -267,11 +271,11 @@ impl Curve {
                 eval_bezier(cp, clamp_t(w, 0.0 as Float, 1.0 as Float), Some(&mut dpcdw));
             let pt_curve_dist2: Float = pc.x * pc.x + pc.y * pc.y;
             if pt_curve_dist2 > hit_width * hit_width * 0.25 as Float {
-                return None;
+                return false;
             }
             let z_max: Float = ray_length * ray.t_max;
             if pc.z < 0.0 as Float || pc.z > z_max {
-                return None;
+                return false;
             }
 
             // compute $v$ coordinate of curve intersection point
@@ -337,12 +341,8 @@ impl Curve {
             if let Some(ref shape) = si.shape {
                 isect.shape = Some(shape.clone());
             }
-            // }
-            // TODO: ++n_hits;
-            // return true;
-            hit = Some((isect, t_hit));
+            true
         }
-        return hit;
     }
 }
 
@@ -368,7 +368,7 @@ impl Shape for Curve {
         // in C++: Bounds3f Shape::WorldBound() const { return (*ObjectToWorld)(ObjectBound()); }
         self.object_to_world.transform_bounds(&self.object_bound())
     }
-    fn intersect(&self, r: &Ray) -> Option<(SurfaceInteraction, Float)> {
+    fn intersect(&self, r: &Ray, t_hit: &mut Float, isect: &mut SurfaceInteraction) -> bool {
         // TODO: ProfilePhase p(isect ? Prof::CurveIntersect : Prof::CurveIntersectP);
         // TODO: ++nTests;
         // transform _Ray_ to object space
@@ -430,7 +430,7 @@ impl Shape for Curve {
             || cp[0].y.min(cp[1].y).min(cp[2].y.min(cp[3].y)) - 0.5 as Float * max_width
                 > 0.0 as Float
         {
-            return None;
+            return false;
         }
 
         // check for non-overlap in x.
@@ -438,7 +438,7 @@ impl Shape for Curve {
             || cp[0].x.min(cp[1].x).min(cp[2].x.min(cp[3].x)) - 0.5 as Float * max_width
                 > 0.0 as Float
         {
-            return None;
+            return false;
         }
 
         // check for non-overlap in z.
@@ -447,7 +447,7 @@ impl Shape for Curve {
         if cp[0].z.max(cp[1].z).max(cp[2].z.max(cp[3].z)) + 0.5 as Float * max_width < 0.0 as Float
             || cp[0].z.min(cp[1].z).min(cp[2].z.min(cp[3].z)) - 0.5 as Float * max_width > z_max
         {
-            return None;
+            return false;
         }
 
         // compute refinement depth for curve, _maxDepth_
@@ -470,6 +470,8 @@ impl Shape for Curve {
         // TODO: ReportValue(refinementLevel, maxDepth);
         self.recursive_intersect(
             &ray,
+            t_hit,
+            isect,
             &[cp[0], cp[1], cp[2], cp[3]],
             &Transform::inverse(&object_to_ray),
             self.u_min,
@@ -478,11 +480,10 @@ impl Shape for Curve {
         )
     }
     fn intersect_p(&self, r: &Ray) -> bool {
-        if let Some((_isect, _t_hit)) = self.intersect(r) {
-            true
-        } else {
-            false
-        }
+        // nullptr in C++
+        let mut t_hit: Float = 0.0;
+        let mut isect: SurfaceInteraction = SurfaceInteraction::default();
+        self.intersect(r, &mut t_hit, &mut isect)
     }
     fn get_reverse_orientation(&self) -> bool {
         self.reverse_orientation
@@ -537,7 +538,9 @@ impl Shape for Curve {
         // ignore any alpha textures used for trimming the shape when
         // performing this intersection. Hack for the "San Miguel"
         // scene, where this is used to make an invisible area light.
-        if let Some((isect_light, _t_hit)) = self.intersect(&ray) {
+        let mut t_hit: Float = 0.0;
+        let mut isect_light: SurfaceInteraction = SurfaceInteraction::default();
+        if self.intersect(&ray, &mut t_hit, &mut isect_light) {
             // convert light sample weight to solid angle measure
             let mut pdf: Float = pnt3_distance_squared(&iref.get_p(), &isect_light.p)
                 / (nrm_abs_dot_vec3(&isect_light.n, &-(*wi)) * self.area());
