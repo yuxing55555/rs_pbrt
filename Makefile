@@ -64,8 +64,6 @@ examples: without-exr
 	./target/release/examples/lights_point_light_new
 	./target/release/examples/parse_ass_file -i ./assets/ass/cornell_box.ass
 	./target/release/examples/parse_blend_file ./assets/blend/suzanne_integrator_test_2_79.blend
-	./target/release/examples/pbrt_spheres_differentials_texfilt
-	./target/release/examples/pbrt_teapot_area_light
 	./target/release/examples/shapes_cylinder_create_cylinder_shape
 	./target/release/examples/shapes_disk_create_disk_shape
 	./target/release/examples/shapes_sphere_create_sphere_shape
