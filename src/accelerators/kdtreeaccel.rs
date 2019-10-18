@@ -151,7 +151,7 @@ pub struct KdTreeAccel {
     pub traversal_cost: i32,
     pub max_prims: i32,
     pub empty_bonus: Float,
-    pub primitives: Vec<Arc<dyn Primitive + Sync + Send>>,
+    pub primitives: Vec<Arc<Primitive>>,
     pub primitive_indices: Vec<i32>,
     pub nodes: Vec<KdAccelNode>,
     pub n_alloced_nodes: i32,
@@ -161,7 +161,7 @@ pub struct KdTreeAccel {
 
 impl KdTreeAccel {
     pub fn new(
-        p: Vec<Arc<dyn Primitive + Sync + Send>>,
+        p: Vec<Arc<Primitive>>,
         isect_cost: i32,
         traversal_cost: i32,
         empty_bonus: Float,
@@ -237,13 +237,13 @@ impl KdTreeAccel {
         );
         kd_tree
     }
-    pub fn create(prims: Vec<Arc<dyn Primitive + Send + Sync>>, ps: &ParamSet) -> Arc<KdTreeAccel> {
+    pub fn create(prims: Vec<Arc<Primitive>>, ps: &ParamSet) -> Primitive {
         let isect_cost: i32 = ps.find_one_int("intersectcost", 80);
         let trav_cost: i32 = ps.find_one_int("traversalcost", 1);
         let empty_bonus: Float = ps.find_one_float("emptybonus", 0.5 as Float);
         let max_prims: i32 = ps.find_one_int("maxprims", 1);
         let max_depth: i32 = ps.find_one_int("maxdepth", -1);
-        Arc::new(KdTreeAccel::new(
+        Primitive::KdTree(KdTreeAccel::new(
             prims.clone(),
             isect_cost,
             trav_cost,
@@ -469,13 +469,11 @@ impl KdTreeAccel {
             bad_refines,
         );
     }
-}
-
-impl Primitive for KdTreeAccel {
-    fn world_bound(&self) -> Bounds3f {
+    // Primitive
+    pub fn world_bound(&self) -> Bounds3f {
         self.bounds
     }
-    fn intersect(&self, ray: &mut Ray, isect: &mut SurfaceInteraction) -> bool {
+    pub fn intersect(&self, ray: &mut Ray, isect: &mut SurfaceInteraction) -> bool {
         // TODO: ProfilePhase p(Prof::AccelIntersect);
         if self.nodes.len() == 0 {
             return false;
@@ -554,8 +552,7 @@ impl Primitive for KdTreeAccel {
                         unsafe {
                             one_primitive = node.priv_union.one_primitive;
                         }
-                        let p: &Arc<dyn Primitive + Send + Sync> =
-                            &self.primitives[one_primitive as usize];
+                        let p: &Arc<Primitive> = &self.primitives[one_primitive as usize];
                         // check one primitive inside leaf node
                         if p.intersect(ray, isect) {
                             hit = true;
@@ -569,7 +566,7 @@ impl Primitive for KdTreeAccel {
                             let index: usize = self.primitive_indices
                                 [(primitive_indices_offset + i) as usize]
                                 as usize;
-                            let p: &Arc<dyn Primitive + Send + Sync> = &self.primitives[index];
+                            let p: &Arc<Primitive> = &self.primitives[index];
                             // check one primitive inside leaf node
                             if p.intersect(ray, isect) {
                                 hit = true;
@@ -598,7 +595,7 @@ impl Primitive for KdTreeAccel {
             false
         }
     }
-    fn intersect_p(&self, ray: &Ray) -> bool {
+    pub fn intersect_p(&self, ray: &Ray) -> bool {
         // TODO: ProfilePhase p(Prof::AccelIntersectP);
         if self.nodes.len() == 0 {
             return false;
@@ -629,8 +626,7 @@ impl Primitive for KdTreeAccel {
                         unsafe {
                             one_primitive = node.priv_union.one_primitive;
                         }
-                        let p: &Arc<dyn Primitive + Send + Sync> =
-                            &self.primitives[one_primitive as usize];
+                        let p: &Arc<Primitive> = &self.primitives[one_primitive as usize];
                         if p.intersect_p(ray) {
                             return true;
                         }
@@ -643,8 +639,7 @@ impl Primitive for KdTreeAccel {
                             let primitive_index: usize = self.primitive_indices
                                 [(primitive_indices_offset + i) as usize]
                                 as usize;
-                            let prim: &Arc<dyn Primitive + Send + Sync> =
-                                &self.primitives[primitive_index];
+                            let prim: &Arc<Primitive> = &self.primitives[primitive_index];
                             if prim.intersect_p(ray) {
                                 return true;
                             }
@@ -710,10 +705,10 @@ impl Primitive for KdTreeAccel {
         }
         false
     }
-    fn get_material(&self) -> Option<Arc<dyn Material + Send + Sync>> {
+    pub fn get_material(&self) -> Option<Arc<dyn Material + Send + Sync>> {
         None
     }
-    fn get_area_light(&self) -> Option<Arc<dyn AreaLight + Send + Sync>> {
+    pub fn get_area_light(&self) -> Option<Arc<dyn AreaLight + Send + Sync>> {
         None
     }
 }
