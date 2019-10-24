@@ -34,7 +34,8 @@ use crate::core::sampler::Sampler;
 use crate::core::scene::Scene;
 use crate::core::shape::Shape;
 use crate::core::texture::{
-    IdentityMapping3D, PlanarMapping2D, Texture, TextureMapping2D, TextureMapping3D, UVMapping2D,
+    IdentityMapping3D, PlanarMapping2D, SphericalMapping2D, Texture, TextureMapping2D,
+    TextureMapping3D, UVMapping2D,
 };
 use crate::core::transform::{AnimatedTransform, Matrix4x4, Transform};
 use crate::filters::boxfilter::BoxFilter;
@@ -774,7 +775,8 @@ fn make_texture(api_state: &mut ApiState) {
                 let dv: Float = tp.find_float("vdelta", 0.0);
                 map = Some(Box::new(UVMapping2D { su, sv, du, dv }));
             } else if mapping == "spherical" {
-                println!("TODO: SphericalMapping2D");
+                let tex_2_world = api_state.cur_transform.t[0];
+                map = Some(Box::new(SphericalMapping2D::new(tex_2_world)));
             } else if mapping == "cylindrical" {
                 println!("TODO: CylindricalMapping2D");
             } else if mapping == "planar" {
@@ -856,7 +858,8 @@ fn make_texture(api_state: &mut ApiState) {
                 let dv: Float = tp.find_float("vdelta", 0.0);
                 map = Some(Box::new(UVMapping2D { su, sv, du, dv }));
             } else if mapping == "spherical" {
-                println!("TODO: SphericalMapping2D");
+                let tex_2_world = api_state.cur_transform.t[0];
+                map = Some(Box::new(SphericalMapping2D::new(tex_2_world)));
             } else if mapping == "cylindrical" {
                 println!("TODO: CylindricalMapping2D");
             } else if mapping == "planar" {
@@ -988,7 +991,8 @@ fn make_texture(api_state: &mut ApiState) {
                 let dv: Float = tp.find_float("vdelta", 0.0);
                 map = Some(Box::new(UVMapping2D { su, sv, du, dv }));
             } else if mapping == "spherical" {
-                println!("TODO: SphericalMapping2D");
+                let tex_2_world = api_state.cur_transform.t[0];
+                map = Some(Box::new(SphericalMapping2D::new(tex_2_world)));
             } else if mapping == "cylindrical" {
                 println!("TODO: CylindricalMapping2D");
             } else if mapping == "planar" {
@@ -1077,7 +1081,8 @@ fn make_texture(api_state: &mut ApiState) {
                     let dv: Float = tp.find_float("vdelta", 0.0);
                     map = Some(Box::new(UVMapping2D { su, sv, du, dv }));
                 } else if mapping == "spherical" {
-                    println!("TODO: SphericalMapping2D");
+                    let tex_2_world = api_state.cur_transform.t[0];
+                    map = Some(Box::new(SphericalMapping2D::new(tex_2_world)));
                 } else if mapping == "cylindrical" {
                     println!("TODO: CylindricalMapping2D");
                 } else if mapping == "planar" {
@@ -1125,7 +1130,8 @@ fn make_texture(api_state: &mut ApiState) {
                 let dv: Float = tp.find_float("vdelta", 0.0);
                 map = Some(Box::new(UVMapping2D { su, sv, du, dv }));
             } else if mapping == "spherical" {
-                println!("TODO: SphericalMapping2D");
+                let tex_2_world = api_state.cur_transform.t[0];
+                map = Some(Box::new(SphericalMapping2D::new(tex_2_world)));
             } else if mapping == "cylindrical" {
                 println!("TODO: CylindricalMapping2D");
             } else if mapping == "planar" {
