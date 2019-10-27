@@ -444,7 +444,7 @@ impl Primitive for BVHAccel {
         let mut nodes_to_visit: [u32; 64] = [0_u32; 64];
         let mut si: SurfaceInteraction = SurfaceInteraction::default();
         loop {
-            let node: LinearBVHNode = self.nodes[current_node_index as usize];
+            let node: &LinearBVHNode = &self.nodes[current_node_index as usize];
             // check ray against BVH node
             let intersects: bool = node.bounds.intersect_p(ray, &inv_dir, dir_is_neg);
             if intersects {
