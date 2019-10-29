@@ -1248,6 +1248,70 @@ fn make_texture(api_state: &mut ApiState) {
     // MakeSpectrumTexture(texname, curTransform[0], tp);
 }
 
+pub fn make_camera(api_state: &ApiState, film: Arc<Film>) -> Option<Arc<dyn Camera + Send + Sync>> {
+    let mut some_camera: Option<Arc<dyn Camera + Send + Sync>> = None;
+    let medium_interface: MediumInterface = create_medium_interface(&api_state);
+    let animated_cam_to_world: AnimatedTransform = AnimatedTransform::new(
+        &api_state.render_options.camera_to_world.t[0],
+        api_state.render_options.transform_start_time,
+        &api_state.render_options.camera_to_world.t[1],
+        api_state.render_options.transform_end_time,
+    );
+    if api_state.render_options.camera_name == "perspective" {
+        let camera: Arc<dyn Camera + Send + Sync> = PerspectiveCamera::create(
+            &api_state.render_options.camera_params,
+            animated_cam_to_world,
+            film,
+            medium_interface.outside,
+        );
+        some_camera = Some(camera);
+    } else if api_state.render_options.camera_name == "orthographic" {
+        let camera: Arc<dyn Camera + Send + Sync> = OrthographicCamera::create(
+            &api_state.render_options.camera_params,
+            animated_cam_to_world,
+            film,
+            medium_interface.outside,
+        );
+        some_camera = Some(camera);
+    } else if api_state.render_options.camera_name == "realistic" {
+        if let Some(ref search_directory) = api_state.search_directory {
+            let camera: Arc<dyn Camera + Send + Sync> = RealisticCamera::create(
+                &api_state.render_options.camera_params,
+                animated_cam_to_world,
+                film,
+                medium_interface.outside,
+                // additional parameters:
+                Some(search_directory),
+            );
+            some_camera = Some(camera);
+        } else {
+            let camera: Arc<dyn Camera + Send + Sync> = RealisticCamera::create(
+                &api_state.render_options.camera_params,
+                animated_cam_to_world,
+                film,
+                medium_interface.outside,
+                // additional parameters:
+                None,
+            );
+            some_camera = Some(camera);
+        }
+    } else if api_state.render_options.camera_name == "environment" {
+        let camera: Arc<dyn Camera + Send + Sync> = EnvironmentCamera::create(
+            &api_state.render_options.camera_params,
+            animated_cam_to_world,
+            film,
+            medium_interface.outside,
+        );
+        some_camera = Some(camera);
+    } else {
+        println!(
+            "Camera \"{}\" unknown.",
+            api_state.render_options.camera_name
+        );
+    }
+    some_camera
+}
+
 pub fn make_filter(name: &String, param_set: &ParamSet) -> Option<Box<dyn Filter + Send + Sync>> {
     let mut some_filter: Option<Box<dyn Filter + Send + Sync>> = None;
     if name == "box" {
@@ -1860,67 +1924,7 @@ pub fn pbrt_cleanup(api_state: &ApiState) {
         );
         if let Some(film) = some_film {
             // MakeCamera
-            // TODO: let mut some_camera: Option<Arc<Camera + Sync + Send>> = None;
-            let some_camera: Option<Arc<dyn Camera + Sync + Send>>;
-            let medium_interface: MediumInterface = create_medium_interface(&api_state);
-            let animated_cam_to_world: AnimatedTransform = AnimatedTransform::new(
-                &api_state.render_options.camera_to_world.t[0],
-                api_state.render_options.transform_start_time,
-                &api_state.render_options.camera_to_world.t[1],
-                api_state.render_options.transform_end_time,
-            );
-            if api_state.render_options.camera_name == "perspective" {
-                let camera: Arc<dyn Camera + Send + Sync> = PerspectiveCamera::create(
-                    &api_state.render_options.camera_params,
-                    animated_cam_to_world,
-                    film,
-                    medium_interface.outside,
-                );
-                some_camera = Some(camera);
-            } else if api_state.render_options.camera_name == "orthographic" {
-                let camera: Arc<dyn Camera + Send + Sync> = OrthographicCamera::create(
-                    &api_state.render_options.camera_params,
-                    animated_cam_to_world,
-                    film,
-                    medium_interface.outside,
-                );
-                some_camera = Some(camera);
-            } else if api_state.render_options.camera_name == "realistic" {
-                if let Some(ref search_directory) = api_state.search_directory {
-                    let camera: Arc<dyn Camera + Send + Sync> = RealisticCamera::create(
-                        &api_state.render_options.camera_params,
-                        animated_cam_to_world,
-                        film,
-                        medium_interface.outside,
-                        // additional parameters:
-                        Some(search_directory),
-                    );
-                    some_camera = Some(camera);
-                } else {
-                    let camera: Arc<dyn Camera + Send + Sync> = RealisticCamera::create(
-                        &api_state.render_options.camera_params,
-                        animated_cam_to_world,
-                        film,
-                        medium_interface.outside,
-                        // additional parameters:
-                        None,
-                    );
-                    some_camera = Some(camera);
-                }
-            } else if api_state.render_options.camera_name == "environment" {
-                let camera: Arc<dyn Camera + Send + Sync> = EnvironmentCamera::create(
-                    &api_state.render_options.camera_params,
-                    animated_cam_to_world,
-                    film,
-                    medium_interface.outside,
-                );
-                some_camera = Some(camera);
-            } else {
-                panic!(
-                    "Camera \"{}\" unknown.",
-                    api_state.render_options.camera_name
-                );
-            }
+            let some_camera: Option<Arc<dyn Camera + Send + Sync>> = make_camera(&api_state, film);
             if let Some(camera) = some_camera {
                 // MakeSampler
                 let mut some_sampler: Option<Box<dyn Sampler + Sync + Send>> = None;
@@ -2513,9 +2517,6 @@ pub fn pbrt_cleanup(api_state: &ApiState) {
             panic!("Unable to create film.");
         }
     }
-    // } else {
-    //     panic!("Film \"{}\" unknown.", api_state.render_options.film_name);
-    // }
 }
 
 pub fn pbrt_translate(api_state: &mut ApiState, dx: Float, dy: Float, dz: Float) {
